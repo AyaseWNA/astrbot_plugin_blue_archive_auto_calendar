@@ -113,3 +113,4 @@ if __name__ == "__main__":
         img = asyncio.run(MyPlugin.send("974502961","cn"))
     except Exception as e:
         print(e)
+
