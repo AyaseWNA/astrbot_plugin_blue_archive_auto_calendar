@@ -9,7 +9,7 @@ import aiohttp
 from .gamekee_calendar import transform_gamekee_calendar
 from .schaledb_calendar import transform_schaledb_calendar
 from .draw import create_image, draw_item, draw_rec, draw_text, draw_title
-
+from astrbot.api import logger
 
 
 event_data = {
@@ -37,6 +37,15 @@ event_updated = {
     'en-jp': '',
     'db-jp': '',
     'db-global': ''
+}
+
+data_source = {
+    'jp': 'gamekee',
+    'cn': 'gamekee',
+    'global': 'gamekee',
+    'en-jp': 'schaledb',
+    'db-jp': 'schaledb',
+    'db-global': 'schaledb'
 }
 
 gamekee_server = {
@@ -166,26 +175,38 @@ async def load_event(server):
 
     if server == 'jp':
         flag =  await load_event_gamekee("jp")
-        if flag == 0 or not event_data['jp']:
-            print("gamekee信息异常，启用schaledb信息")
+        if flag == 0 and event_data['jp']:
+            data_source['jp'] = 'gamekee'
+            logger.info("获取gamekee日服信息成功")
+        else:
+            logger.info("gamekee信息异常，启用schaledb信息")
             flag = await load_event_schaledb("jp")
-            if flag == 1 or not event_data['db-jp']:
-                print("schaledb信息异常，所有信息源获取失败")
+            if flag == 0 and event_data['db-jp']:
+                data_source['jp'] = 'schaledb'
+            else:
+                logger.info("schaledb信息异常，所有信息源获取失败")
         
     if server == 'cn':
         flag =  await load_event_gamekee("cn")
-        if flag == 0 or not event_data['cn']:
-            print("gamekee信息异常，获取失败")
+        if flag == 0 and event_data['cn']:
+            data_source['cn'] = 'gamekee'
+            logger.info("获取gamekee国服信息成功")
+        else:
+            logger.info("gamekee信息异常，获取失败")
 
     
     elif server == 'global':
         flag =  await load_event_gamekee("global")
-        if flag == 0 or not event_data['global']:
-
-            print("gamekee信息异常，启用schaledb信息")
+        if flag == 0 and event_data['global']:
+            data_source['global'] = 'gamekee'
+            logger.info("获取gamekee国际服信息成功")
+        else:
+            logger.info("gamekee信息异常，启用schaledb信息")
             flag = await load_event_schaledb("global")
-            if flag == 1 or not event_data['db-global']:
-                print("schaledb信息异常，所有信息源获取失败")
+            if flag == 0 and event_data['db-global']:
+                data_source['global'] = 'schaledb'
+            else:
+                logger.info("schaledb信息异常，所有信息源获取失败")
 
     
 # 计算活动时间并返回处理好的活动列表
@@ -239,6 +260,8 @@ async def generate_day_schedule(server='jp'):
         PIL.Image.Image: 生成的活动日程图片对象，可进一步保存或展示。
     """
     events = await get_events(server, 0, 7)
+    
+    logger.info(f"获取到 {len(events)} 个活动")
 
     has_prediction = False
     title_len = 25
@@ -246,10 +269,15 @@ async def generate_day_schedule(server='jp'):
         if event['start_days'] > 0:
             has_prediction = True
         title_len = max(title_len, len(event['title']) + 5)
+    
+    # 计算图片行数：标题行(1) + 活动行数 + 预测标题行(0或1) + 信息行(1)
     if has_prediction:
-        im = create_image(len(events) + 2, title_len)
+        total_rows = 1 + len(events) + 1 + 1
     else:
-        im = create_image(len(events) + 1, title_len)
+        total_rows = 1 + len(events) + 1
+    
+    logger.info(f"has_prediction={has_prediction}, total_rows={total_rows}, title_len={title_len}")
+    im = create_image(total_rows, title_len)
 
     title = f'碧蓝档案{server_name[server]}活动'
     ba_now = get_ba_now(0)
@@ -257,17 +285,28 @@ async def generate_day_schedule(server='jp'):
 
     if len(events) == 0:
         draw_item(im, 1, 1, '无数据', 0)
-    i = 1
-    for event in events:
-        if event['start_days'] <= 0:
-            draw_item(im, i, event['type'], event['title'], event['left_days'])
-            i += 1
-    if has_prediction:
-        draw_title(im, i, right='即将开始')
+        i = 2
+    else:
+        i = 1
         for event in events:
-            if event['start_days'] > 0:
+            if event['start_days'] <= 0:
+                logger.info(f"绘制活动 {i}: {event['title']}")
+                draw_item(im, i, event['type'], event['title'], event['left_days'])
                 i += 1
-                draw_item(im, i, event['type'], event['title'], -event['start_days'])
+        
+        if has_prediction:
+            logger.info(f"绘制预测标题行 {i}")
+            draw_title(im, i, right='即将开始')
+            for event in events:
+                if event['start_days'] > 0:
+                    i += 1
+                    logger.info(f"绘制预测活动 {i}: {event['title']}")
+                    draw_item(im, i, event['type'], event['title'], -event['start_days'])
+    
+    # 添加数据来源和bot信息行
+    logger.info(f"绘制信息行 {i}, 数据来源：{data_source[server]}")
+    draw_title(im, i, left=f'data by {data_source[server]}', right='bot by astrbot')
+    
     return im
 
 if __name__ == '__main__':

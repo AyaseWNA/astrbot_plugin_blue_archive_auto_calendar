@@ -1,0 +1,4 @@
+aiohttp==3.13.0
+aiohttp==3.11.10
+astrbot==4.3.5
+Pillow==12.0.0

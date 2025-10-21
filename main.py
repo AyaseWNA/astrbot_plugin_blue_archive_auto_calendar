@@ -37,6 +37,22 @@ class MyPlugin(Star):
         asyncio.create_task(self.set_schedule())
 
     @filter.command("日历")
+    async def send_calendar(self, event: AstrMessageEvent, server: str):
+        umo = event.unified_msg_origin
+        # 生成并保存图片
+        img = await generate_day_schedule(server)
+        temp_dir = ".temp"
+        os.makedirs(temp_dir, exist_ok=True)
+
+        img_path = os.path.join(temp_dir, f"{server}_pic.png")
+        img.save(img_path,"PNG")
+        logger.info(umo)
+        # 发送图片
+        message_chain = MessageChain().file_image(img_path)
+        await self.context.send_message(umo, message_chain)
+        logger.info(f" {umo} 图片发送成功")
+    
+    
     async def send(self, group_id, server):
         # 获取平台ID并组合为发送umo（似乎新版本直接整合了消息平台为default，Soulter我的超人！！！）
         # platform_id = _get_platform_id(self.context)
@@ -59,7 +75,6 @@ class MyPlugin(Star):
         """
         获取配置并设置定时任务
         """
-
         auto_send_time = self.config["auto_send_time"]
         group_ids_and_servers = self.config["group_ids_and_servers"]
 
@@ -106,11 +121,5 @@ class MyPlugin(Star):
                     
             except Exception as e:
                 logger.error(f"定时发送错误: {e}")
-                await asyncio.sleep(300)  # 错误后5分钟重试
-
-if __name__ == "__main__":
-    try:
-        img = asyncio.run(MyPlugin.send("974502961","cn"))
-    except Exception as e:
-        print(e)
+                await asyncio.sleep(300)
 

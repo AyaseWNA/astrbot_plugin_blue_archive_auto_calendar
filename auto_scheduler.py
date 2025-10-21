@@ -6,7 +6,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
-
+from astrbot.api import logger
 
 
 class AutoScheduler:
@@ -203,7 +203,7 @@ class AutoScheduler:
 
                 logger.info(f"群 {group_id} 获取到 {len(messages)} 条消息，开始分析")
 
-                进行分析 - 构造正确的 unified_msg_origin
+                # 进行分析 - 构造正确的 unified_msg_origin
                 platform_id = self._get_platform_id()
                 umo = f"{platform_id}:GroupMessage:{group_id}" if platform_id else None
                 analysis_result = await self.analyzer.analyze_messages(messages, group_id, umo)
