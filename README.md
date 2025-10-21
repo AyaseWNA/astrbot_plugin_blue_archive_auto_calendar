@@ -12,7 +12,7 @@
 
 
 ## 效果展示
-<img src="./assets/show.jpg" width="500">
+<img src="assets\show.png" width="500">
 
 ## 配置项目
 | 配置项                           | 说明                                               | 备注                                     |
@@ -23,9 +23,9 @@
 
 ## 使用方法
 1. 下载插件
-<img src="./assets/guider1.jpg" width="500">
+<img src="assets/guider1.jpg" width="500">
 2. 在控制面板进入配置项，删除默认配置并填入自己的配置
-<img src="./assets/guider2.jpg" width="500">
+<img src="assets/guider2.jpg" width="500">
 ## 使用注意事项
 - 消息平台兼容问题：自动发送的时候使用的时候default的消息平台，使用多个消息平台时可能会出现问题，目前只能确保单独使用aiocqhttp不出现问题
 - 数据切换：gamekee 出现问题时会自动切换到 SchaleDB 数据库，此时会缺少大决战数据（因为修这个查询函数好麻烦我还找不到这个数据库的说明文档😭）。
