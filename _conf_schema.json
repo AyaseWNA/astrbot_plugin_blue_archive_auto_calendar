@@ -1,13 +1,4 @@
 {
-    "group_ids_and_servers": {
-        "description": "启用日历功能的QQ群与服务器对列表",
-        "hint": "填入允许使用日历功能的“QQ群号:服务器”，支持cn,jp,globle（参考默认项）",
-        "type": "list",
-        "default": ["114514:cn,jp,globle"],
-        "items": {
-            "type": "string"
-        }
-    },
     "auto_send_time": {
         "type": "string",
         "description": "发送日历时间",

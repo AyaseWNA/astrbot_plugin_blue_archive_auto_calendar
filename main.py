@@ -2,6 +2,7 @@ import asyncio
 import os
 from .generate_pic.genetate import generate_day_schedule
 from datetime import datetime, timedelta
+import json
 
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
@@ -52,12 +53,71 @@ class MyPlugin(Star):
         await self.context.send_message(umo, message_chain)
         logger.info(f" {umo} 图片发送成功")
     
+    @filter.command("启用日历")
+    async def switch_on(self, event: AstrMessageEvent,server: str):
+        """
+        启用日历命令，获取对话umo并持久保存在../plugin_data/schaledb_calendar/umo.json中
+
+        Args:
+            server: 服务器名称，cn/jp/global
+        """
+        try:
+            # 确保路径
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            plugin_root = os.path.join(current_dir, "..", "..")
+            file_path = os.path.join(plugin_root, "plugin_data", "schaledb_calendar", "umo.json")
+            file_path = os.path.normpath(file_path)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # 创建数据字典并继承旧数据
+            data_dict = {}
+            with open(file_path, 'r', encoding='utf-8') as f:
+                try:
+                    data_dict = json.load(f)
+                except json.JSONDecodeError:
+                    data_dict = {}
+
+            # 组合umo以及服务器名称
+            umo = event.unified_msg_origin
+            data_dict[umo] = server
+            logger.info({umo: server})
+
+            # 保存数据
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data_dict, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"启用日历出错：{e}")
+        else:
+            yield event.plain_result(f"已启用本聊天{server}日历推送")
     
-    async def send(self, group_id, server):
-        # 获取平台ID并组合为发送umo（似乎新版本直接整合了消息平台为default，Soulter我的超人！！！）
-        # platform_id = _get_platform_id(self.context)
-        umo = f"default:GroupMessage:{group_id}" if group_id else None
-        
+    @filter.command("禁用日历")
+    async def switch_off(sel ,event: AstrMessageEvent,):
+        """
+        禁用日历命令，删除对话umo
+        """
+        # 确保路径
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        plugin_root = os.path.join(current_dir, "..", "..")
+        file_path = os.path.join(plugin_root, "plugin_data", "schaledb_calendar", "umo.json")
+        file_path = os.path.normpath(file_path)
+
+        umo = event.unified_msg_origin
+        data_dict = {}
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data_dict = json.load(f)
+
+        try:
+            del data_dict[umo]
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data_dict, f, ensure_ascii=False, indent=2)
+            logger.info(f"已禁用umo: {umo}")
+        except Exception as e:
+            logger.error(f"禁用umo出错: {e}")
+        else:
+            yield event.plain_result(f"已禁用{umo}日历推送")
+    async def send(self, umo, server):
         # 生成并保存图片
         img = await generate_day_schedule(server)
         temp_dir = ".temp"
@@ -71,13 +131,31 @@ class MyPlugin(Star):
         await self.context.send_message(umo, message_chain)
         logger.info(f" {umo} 图片发送成功")
     
+
     async def set_schedule(self):
         """
         获取配置并设置定时任务
         """
         auto_send_time = self.config["auto_send_time"]
-        group_ids_and_servers = self.config["group_ids_and_servers"]
 
+        # 确保路径
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        plugin_root = os.path.join(current_dir, "..", "..")
+        file_path = os.path.join(plugin_root, "plugin_data", "schaledb_calendar", "umo.json")
+        file_path = os.path.normpath(file_path)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        # 读取持久化配置文件
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                group_ids_and_servers = json.load(f)
+        except Exception as e:
+            logger.error(f"读取持久化配置文件出错: {e}")
+            group_ids_and_servers = {}
+        else:
+            logger.info(f"读取持久化配置文件成功")
+
+        # 调用函数设置定时任务
         try:
             await self.schedule_send_loop(auto_send_time, group_ids_and_servers)
             logger.info(f"定时任务已启动，目标时间: {auto_send_time}")
@@ -85,13 +163,14 @@ class MyPlugin(Star):
             logger.info(f"定时任务启动失败 {e}")
 
     
+
     async def schedule_send_loop(self, auto_send_time, group_ids_and_servers):
         """
         定时触发发送函数
         
         Args:
             auto_send_time: 定时执行的目标时间字符串，格式为("%H:%M")
-            group_ids: 包含目标group_id的列表
+            group_ids_and_servers: 包含目标group_id的列表
         """
         while True:
             try:
@@ -109,15 +188,13 @@ class MyPlugin(Star):
                 
                 await asyncio.sleep(wait_seconds)
                 
+                # TODO 添加错误验证功能
                 # 循环遍历group_ids_and_servers列表并执行发送操作
-                for group_and_servers_info in group_ids_and_servers:
-                    group_info = group_and_servers_info.split(":")
-                    group_id = group_info[0]
-                    servers = group_info[1].split(",")
-                
-                    for server in servers:
-                        await self.send(group_id, server)
-                        logger.info(f"定时消息发送完成，Group ID: {group_id}, Server: {server}")
+                for umo, servers in group_ids_and_servers.items():
+                    servers_list = servers.split("/")
+                    for server in servers_list:
+                        await self.send(umo, server)
+                        logger.info(f"定时消息发送完成，umo: {umo}, Server: {server}")
                     
             except Exception as e:
                 logger.error(f"定时发送错误: {e}")
