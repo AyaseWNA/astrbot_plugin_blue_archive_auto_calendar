@@ -25,7 +25,7 @@
 <img src="assets/guider1.jpg" width="500">
 2. 在控制面板进入配置项，配置发送时间
 <img src="assets/guider2.jpg" width="500">
-3. 在群聊中使用"/日历 [服务器名(cn/jp/global)]"来启用本会话的的日历推送，服务器可以为cn、jp、global，使用'/'分割
+3. 在群聊中使用"/日历 [服务器名(cn/jp/global)]"来启用本会话的的日历推送，服务器可以为cn、jp、global，使用'/'分割，例如'/启用日历 jp/global/cn'
 4. 如果要禁用则使用'/禁用日历'来禁用本会话的日历推送
 
 ## 使用注意事项
@@ -36,7 +36,7 @@
 - 本项目参考了[astrbot-qq-group-daily-analysis](https://github.com/SXP-Simon/astrbot-qq-group-daily-analysis/)的定时调度和消息平台处理
 - 查询逻辑来自隔壁的HoshinoBot插件
 [Blue_Archive_HoshinoBot](https://github.com/Cosmos01/Blue_Archive_HoshinoBot)，该项目似乎由于SchaleDB的数据格式更新所以对SchaleDB查询存在问题，而且英文wiki更新了反爬虫导致查询失效，我修补了一下，不过只要gamekee不出问题应该就没事
-- 数据来源：[gamekee](https://www.gamekee.com/ba/)，[SchaleD](|https://schaledb.com/home) 
+- 数据来源：[gamekee](https://www.gamekee.com/ba/)，[SchaleDBs](https://schaledb.com/home) 
 
 
 ## 后续更新计划
